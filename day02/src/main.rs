@@ -1,10 +1,10 @@
-use std::num::ParseIntError;
+use std::{num::ParseIntError, ops::RangeInclusive};
 use std::str::FromStr;
 
 #[derive(Debug)]
 struct PasswdRule {
     c: char,
-    range: (usize, usize),
+    range: RangeInclusive<usize>,
     txt: String,
 }
 
@@ -30,10 +30,10 @@ impl FromStr for PasswdRule {
         let txt = iter.next().ok_or(ParseError::Empty)?;
 
         let mut iter = range_str.split('-');
-        let range: (usize, usize) = (
-            iter.next().ok_or(ParseError::Empty)?.parse()?,
-            iter.next().ok_or(ParseError::Empty)?.parse()?,
-        );
+        let s = iter.next().ok_or(ParseError::Empty)?.parse()?;
+        let e = iter.next().ok_or(ParseError::Empty)?.parse()?;
+
+        let range = s..=e;
 
         Ok(PasswdRule {
             c: c_str.chars().next().ok_or(ParseError::Empty)?,
@@ -46,12 +46,12 @@ impl FromStr for PasswdRule {
 impl PasswdRule {
     fn is_valid_p1(&self) -> bool {
         let cnt = self.txt.matches(self.c).count();
-        cnt >= self.range.0 && cnt <= self.range.1
+        self.range.contains(&cnt)
     }
 
     fn is_valid_p2(&self) -> bool {
-        let c1 = self.txt.chars().nth(self.range.0 - 1).unwrap();
-        let c2 = self.txt.chars().nth(self.range.1 - 1).unwrap();
+        let c1 = self.txt.chars().nth(self.range.start() - 1).unwrap();
+        let c2 = self.txt.chars().nth(self.range.end() - 1).unwrap();
 
         (c1 == self.c) ^ (c2 == self.c)
     }
