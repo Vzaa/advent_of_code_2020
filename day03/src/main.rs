@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::iter;
 
 type Pos = (i64, i64);
 
@@ -24,6 +25,18 @@ impl TryFrom<char> for Tile {
     }
 }
 
+fn count_trees(tilemap: &HashMap<Pos, Tile>, jump: Pos) -> usize {
+    let max_x = tilemap.keys().map(|p| p.0).max().unwrap();
+    let mut pos = (0, 0);
+
+    iter::from_fn(move || {
+        pos = ((pos.0 + jump.0) % (max_x + 1), pos.1 + jump.1);
+        tilemap.get(&pos)
+    })
+    .filter(|&&p| p == Tile::Tree)
+    .count()
+}
+
 fn p1() {
     let rdr = BufReader::new(File::open("input").unwrap());
     let mut tilemap: HashMap<Pos, Tile> = HashMap::new();
@@ -35,22 +48,7 @@ fn p1() {
         }
     }
 
-    let max_x = tilemap.keys().map(|p| p.0).max().unwrap();
-
-    let mut cnt = 0;
-    let mut pos = (0, 0);
-    loop {
-        if let Some(t) = tilemap.get(&pos) {
-            if *t == Tile::Tree {
-                cnt += 1;
-            }
-        } else {
-            break;
-        }
-        pos = ((pos.0 + 3) % (max_x + 1), pos.1 + 1);
-    }
-
-    println!("Part 1: {}", cnt);
+    println!("Part 1: {}", count_trees(&tilemap, (3, 1)));
 }
 
 fn p2() {
@@ -64,30 +62,13 @@ fn p2() {
         }
     }
 
-    let max_x = tilemap.keys().map(|p| p.0).max().unwrap();
-
     let list = [(1, 1), (3, 1), (5, 1), (7, 1), (1, 2)];
 
-    let mut out = vec![];
+    let mult = list
+        .iter()
+        .fold(1, |acc, &j| acc * count_trees(&tilemap, j));
 
-    for step in &list {
-        let mut cnt: i64 = 0;
-        let mut pos = (0, 0);
-
-        loop {
-            if let Some(t) = tilemap.get(&pos) {
-                if *t == Tile::Tree {
-                    cnt += 1;
-                }
-            } else {
-                break;
-            }
-            pos = ((pos.0 + step.0) % (max_x + 1), pos.1 + step.1);
-        }
-        out.push(cnt);
-    }
-
-    println!("Part 2: {}", out.iter().fold(1, |x, y| x * y));
+    println!("Part 2: {}", mult);
 }
 
 fn main() {
