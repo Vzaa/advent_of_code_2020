@@ -1,6 +1,6 @@
 use std::{collections::HashSet, str::FromStr};
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct Cpu {
     pc: i64,
     acc: i64,
@@ -11,7 +11,13 @@ impl Cpu {
         Cpu { pc: 0, acc: 0 }
     }
 
-    fn run_op(&mut self, op: &(Op, i64)) {
+    fn run_op(&mut self, mem: &[(Op, i64)]) -> bool {
+        let op = if let Some(o) = mem.get(self.pc as usize) {
+            o
+        } else {
+            return false;
+        };
+
         match op {
             (Op::Nop, _) => self.pc += 1,
             (Op::Acc, v) => {
@@ -20,6 +26,8 @@ impl Cpu {
             }
             (Op::Jmp, v) => self.pc += v,
         }
+
+        true
     }
 }
 
@@ -60,20 +68,20 @@ fn p1() {
     let mut pc_hist = HashSet::new();
 
     loop {
-        let op = &mem[cpu.pc as usize];
-
         if !pc_hist.insert(cpu.pc) {
             println!("Part 1: {}", cpu.acc);
             return;
         }
 
-        cpu.run_op(op);
+        if !cpu.run_op(&mem) {
+            return;
+        }
     }
 }
 
 fn p2() {
     let instr = std::fs::read_to_string("input").unwrap();
-    let mem: Vec<_> = instr
+    let mem_org: Vec<_> = instr
         .lines()
         .map(|line| {
             let mut iter = line.split(' ');
@@ -83,35 +91,33 @@ fn p2() {
         })
         .collect();
 
-    for (idx, op) in mem.iter().enumerate() {
-        let new_mem = if op.0 == Op::Nop {
-            let mut tmp = mem.clone();
-            tmp[idx].0 = Op::Jmp;
+    let mem_iter = mem_org
+        .iter()
+        .enumerate()
+        .filter(|&(_, op)| op.0 == Op::Nop || op.0 == Op::Jmp)
+        .map(|(idx, op)| {
+            let mut tmp = mem_org.clone();
+            if op.0 == Op::Nop {
+                tmp[idx].0 = Op::Jmp;
+            } else {
+                tmp[idx].0 = Op::Nop;
+            }
             tmp
-        } else if op.0 == Op::Jmp {
-            let mut tmp = mem.clone();
-            tmp[idx].0 = Op::Nop;
-            tmp
-        } else {
-            continue;
-        };
+        });
 
+    for mem in mem_iter {
         let mut cpu = Cpu::new();
         let mut pc_hist = HashSet::new();
 
         loop {
-            let op = if let Some(o) = new_mem.get(cpu.pc as usize) {
-                o
-            } else {
-                println!("Part 2: {}", cpu.acc);
-                return;
-            };
-
             if !pc_hist.insert(cpu.pc) {
                 break;
             }
 
-            cpu.run_op(op);
+            if !cpu.run_op(&mem) {
+                println!("Part 2: {}", cpu.acc);
+                return;
+            }
         }
     }
 }
