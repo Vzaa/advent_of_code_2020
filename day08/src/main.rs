@@ -94,15 +94,18 @@ fn p2() {
     let mem_iter = mem_org
         .iter()
         .enumerate()
-        .filter(|&(_, op)| op.0 == Op::Nop || op.0 == Op::Jmp)
-        .map(|(idx, op)| {
-            let mut tmp = mem_org.clone();
-            if op.0 == Op::Nop {
+        .filter_map(|(idx, op)| match op.0 {
+            Op::Nop => {
+                let mut tmp = mem_org.clone();
                 tmp[idx].0 = Op::Jmp;
-            } else {
-                tmp[idx].0 = Op::Nop;
+                Some(tmp)
             }
-            tmp
+            Op::Jmp => {
+                let mut tmp = mem_org.clone();
+                tmp[idx].0 = Op::Nop;
+                Some(tmp)
+            }
+            _ => None,
         });
 
     for mem in mem_iter {
