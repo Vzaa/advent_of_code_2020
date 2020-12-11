@@ -28,19 +28,21 @@ enum Tile {
 fn neighbors(area: &HashMap<Pos, Tile>, p: Pos) -> Vec<Tile> {
     let nlist = [
         (-1, -1),
-        (1, 1),
-        (1, -1),
-        (-1, 1),
-        (0, 1),
-        (0, -1),
-        (1, 0),
         (-1, 0),
+        (-1, 1),
+        (0, -1),
+        (0, 1),
+        (1, -1),
+        (1, 0),
+        (1, 1),
     ];
 
     nlist
         .iter()
-        .map(|&s| (s.0 + p.0, s.1 + p.1))
-        .map(|n| area.get(&n).copied().unwrap_or(Tile::Floor))
+        .filter_map(|n| {
+            let np = (p.0 + n.0, p.1 + n.1);
+            area.get(&np).copied()
+        })
         .collect()
 }
 
@@ -58,11 +60,11 @@ fn p1() {
         let mut tilemap_new = HashMap::new();
 
         for (k, v) in tilemap.iter() {
-            let n = neighbors(&tilemap, *k);
 
-            let n = match v {
+            let t = match v {
                 Tile::Empty => {
-                    let c = n.iter().filter(|&&a| a == Tile::Occupied).count();
+                    let ns = neighbors(&tilemap, *k);
+                    let c = ns.iter().filter(|&&a| a == Tile::Occupied).count();
                     if c == 0 {
                         Tile::Occupied
                     } else {
@@ -70,7 +72,8 @@ fn p1() {
                     }
                 }
                 Tile::Occupied => {
-                    let c = n.iter().filter(|&&a| a == Tile::Occupied).count();
+                    let ns = neighbors(&tilemap, *k);
+                    let c = ns.iter().filter(|&&a| a == Tile::Occupied).count();
                     if c >= 4 {
                         Tile::Empty
                     } else {
@@ -79,7 +82,7 @@ fn p1() {
                 }
                 Tile::Floor => *v,
             };
-            tilemap_new.insert(*k, n);
+            tilemap_new.insert(*k, t);
         }
 
         if tilemap == tilemap_new {
@@ -95,32 +98,28 @@ fn p1() {
 fn neighbors2(area: &HashMap<Pos, Tile>, p: Pos) -> Vec<Tile> {
     let nlist = [
         (-1, -1),
-        (1, 1),
-        (1, -1),
-        (-1, 1),
-        (0, 1),
-        (0, -1),
-        (1, 0),
         (-1, 0),
+        (-1, 1),
+        (0, -1),
+        (0, 1),
+        (1, -1),
+        (1, 0),
+        (1, 1),
     ];
 
-    let mut out = vec![];
+    nlist
+        .iter()
+        .filter_map(|dir| {
+            let mut np = p;
 
-    for dir in nlist.iter() {
-        let mut np = p;
-
-        let found = iter::from_fn(move || {
-            np = (np.0 + dir.0, np.1 + dir.1);
-            area.get(&np)
+            iter::from_fn(move || {
+                np = (np.0 + dir.0, np.1 + dir.1);
+                area.get(&np)
+            })
+            .find(|&&t| t != Tile::Floor)
+            .cloned()
         })
-        .find(|&&a| a != Tile::Floor);
-
-        if let Some(t) = found {
-            out.push(*t);
-        }
-    }
-
-    out
+        .collect()
 }
 
 fn p2() {
@@ -137,11 +136,10 @@ fn p2() {
         let mut tilemap_new = HashMap::new();
 
         for (k, v) in tilemap.iter() {
-            let n = neighbors2(&tilemap, *k);
-
-            let n = match v {
+            let t = match v {
                 Tile::Empty => {
-                    let c = n.iter().filter(|&&a| a == Tile::Occupied).count();
+                    let ns = neighbors2(&tilemap, *k);
+                    let c = ns.iter().filter(|&&a| a == Tile::Occupied).count();
                     if c == 0 {
                         Tile::Occupied
                     } else {
@@ -149,7 +147,8 @@ fn p2() {
                     }
                 }
                 Tile::Occupied => {
-                    let c = n.iter().filter(|&&a| a == Tile::Occupied).count();
+                    let ns = neighbors2(&tilemap, *k);
+                    let c = ns.iter().filter(|&&a| a == Tile::Occupied).count();
                     if c >= 5 {
                         Tile::Empty
                     } else {
@@ -158,7 +157,7 @@ fn p2() {
                 }
                 Tile::Floor => *v,
             };
-            tilemap_new.insert(*k, n);
+            tilemap_new.insert(*k, t);
         }
 
         if tilemap == tilemap_new {
