@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
+use std::iter;
+
 type Pos = (i64, i64);
 
 impl TryFrom<char> for Tile {
@@ -106,21 +108,20 @@ fn neighbors2(area: &HashMap<Pos, Tile>, p: Pos) -> Vec<Tile> {
 
     for dir in nlist.iter() {
         let mut np = p;
-        np = (np.0 + dir.0, np.1 + dir.1);
 
-        while let Some(&t) = area.get(&np) {
-            if t != Tile::Floor {
-                out.push(t);
-                break;
-            } else {
-                np = (np.0 + dir.0, np.1 + dir.1);
-            }
+        let found = iter::from_fn(move || {
+            np = (np.0 + dir.0, np.1 + dir.1);
+            area.get(&np)
+        })
+        .find(|&&a| a != Tile::Floor);
+
+        if let Some(t) = found {
+            out.push(*t);
         }
     }
 
     out
 }
-
 
 fn p2() {
     let instr = std::fs::read_to_string("input").unwrap();
