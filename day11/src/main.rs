@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 use std::iter;
 
@@ -25,6 +24,41 @@ enum Tile {
     Occupied,
 }
 
+impl Default for Tile {
+    fn default() -> Self {
+        Tile::Floor
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+struct TileMap<T> {
+    buf: Vec<T>,
+    w: usize,
+    h: usize,
+}
+
+impl<T: Default + Clone> TileMap<T> {
+    fn new(h: usize, w: usize) -> TileMap<T> {
+        TileMap {
+            buf: vec![Default::default(); w * h],
+            w,
+            h,
+        }
+    }
+
+    fn get(&self, p: &Pos) -> Option<&T> {
+        if p.0 < 0 || p.1 < 0 || p.0 >= self.w as i64 {
+            return None;
+        }
+        self.buf.get(p.1 as usize * self.w + p.0 as usize)
+    }
+
+    fn insert(&mut self, p: Pos, a: T) {
+        self.buf[p.1 as usize * self.w + p.0 as usize] = a;
+    }
+    // TODO: add iterators like HashMap
+}
+
 static NLIST: [Pos; 8] = [
     (-1, -1),
     (-1, 0),
@@ -36,14 +70,14 @@ static NLIST: [Pos; 8] = [
     (1, 1),
 ];
 
-fn neighbors<'a>(area: &'a HashMap<Pos, Tile>, p: Pos) -> impl Iterator<Item = &Tile> + 'a {
+fn neighbors(area: &TileMap<Tile>, p: Pos) -> impl Iterator<Item = &Tile> + '_ {
     NLIST.iter().filter_map(move |n| {
         let np = (p.0 + n.0, p.1 + n.1);
         area.get(&np)
     })
 }
 
-fn neighbors2<'a>(area: &'a HashMap<Pos, Tile>, p: Pos) -> impl Iterator<Item = &Tile> + 'a {
+fn neighbors2(area: &TileMap<Tile>, p: Pos) -> impl Iterator<Item = &Tile> + '_ {
     NLIST.iter().filter_map(move |dir| {
         let mut np = p;
 
@@ -55,88 +89,96 @@ fn neighbors2<'a>(area: &'a HashMap<Pos, Tile>, p: Pos) -> impl Iterator<Item = 
     })
 }
 
-fn p1(mut tilemap: HashMap<Pos, Tile>) {
+fn p1(mut tilemap: TileMap<Tile>) {
+    let mut tilemap_new = TileMap::new(tilemap.h, tilemap.w);
     loop {
-        let mut tilemap_new = HashMap::new();
+        for y in 0_i64..(tilemap.h as i64) {
+            for x in 0_i64..(tilemap.w as i64) {
+                let k = &(x, y);
+                let v = tilemap.get(k).unwrap();
 
-        for (k, v) in tilemap.iter() {
-            let t = match v {
-                Tile::Empty => {
-                    let ns = neighbors(&tilemap, *k);
-                    let c = ns.filter(|&&a| a == Tile::Occupied).count();
-                    if c == 0 {
-                        Tile::Occupied
-                    } else {
-                        *v
+                let t = match v {
+                    Tile::Empty => {
+                        let ns = neighbors(&tilemap, *k);
+                        let c = ns.filter(|&&a| a == Tile::Occupied).count();
+                        if c == 0 {
+                            Tile::Occupied
+                        } else {
+                            *v
+                        }
                     }
-                }
-                Tile::Occupied => {
-                    let ns = neighbors(&tilemap, *k);
-                    let c = ns.filter(|&&a| a == Tile::Occupied).count();
-                    if c >= 4 {
-                        Tile::Empty
-                    } else {
-                        *v
+                    Tile::Occupied => {
+                        let ns = neighbors(&tilemap, *k);
+                        let c = ns.filter(|&&a| a == Tile::Occupied).count();
+                        if c >= 4 {
+                            Tile::Empty
+                        } else {
+                            *v
+                        }
                     }
-                }
-                Tile::Floor => *v,
-            };
-            tilemap_new.insert(*k, t);
+                    Tile::Floor => *v,
+                };
+                tilemap_new.insert(*k, t);
+            }
         }
 
         if tilemap == tilemap_new {
-            let cnt = tilemap.values().filter(|&&a| a == Tile::Occupied).count();
+            let cnt = tilemap.buf.iter().filter(|&&a| a == Tile::Occupied).count();
             println!("Part 1: {}", cnt);
             break;
         }
 
-        tilemap = tilemap_new;
+        std::mem::swap(&mut tilemap, &mut tilemap_new);
     }
 }
 
-fn p2(mut tilemap: HashMap<Pos, Tile>) {
+fn p2(mut tilemap: TileMap<Tile>) {
+    let mut tilemap_new = TileMap::new(tilemap.h, tilemap.w);
     loop {
-        let mut tilemap_new = HashMap::new();
+        for y in 0_i64..(tilemap.h as i64) {
+            for x in 0_i64..(tilemap.w as i64) {
+                let k = &(x, y);
+                let v = tilemap.get(k).unwrap();
 
-        for (k, v) in tilemap.iter() {
-            let t = match v {
-                Tile::Empty => {
-                    let ns = neighbors2(&tilemap, *k);
-                    let c = ns.filter(|&&a| a == Tile::Occupied).count();
-                    if c == 0 {
-                        Tile::Occupied
-                    } else {
-                        *v
+                let t = match v {
+                    Tile::Empty => {
+                        let ns = neighbors2(&tilemap, *k);
+                        let c = ns.filter(|&&a| a == Tile::Occupied).count();
+                        if c == 0 {
+                            Tile::Occupied
+                        } else {
+                            *v
+                        }
                     }
-                }
-                Tile::Occupied => {
-                    let ns = neighbors2(&tilemap, *k);
-                    let c = ns.filter(|&&a| a == Tile::Occupied).count();
-                    if c >= 5 {
-                        Tile::Empty
-                    } else {
-                        *v
+                    Tile::Occupied => {
+                        let ns = neighbors2(&tilemap, *k);
+                        let c = ns.filter(|&&a| a == Tile::Occupied).count();
+                        if c >= 5 {
+                            Tile::Empty
+                        } else {
+                            *v
+                        }
                     }
-                }
-                Tile::Floor => *v,
-            };
-            tilemap_new.insert(*k, t);
+                    Tile::Floor => *v,
+                };
+                tilemap_new.insert(*k, t);
+            }
         }
 
         if tilemap == tilemap_new {
-            let cnt = tilemap.values().filter(|&&a| a == Tile::Occupied).count();
+            let cnt = tilemap.buf.iter().filter(|&&a| a == Tile::Occupied).count();
             println!("Part 2: {}", cnt);
             break;
         }
 
-        tilemap = tilemap_new;
+        std::mem::swap(&mut tilemap, &mut tilemap_new);
     }
 }
 
 #[allow(dead_code)]
-fn draw_map(area: &HashMap<Pos, Tile>) {
-    'outer: for y in 0.. {
-        for x in 0.. {
+fn draw_map(area: &TileMap<Tile>, h: i64, w: i64) {
+    'outer: for y in 0..h {
+        for x in 0..w {
             if let Some(c) = area.get(&(x, y)) {
                 let x = match c {
                     Tile::Floor => '.',
@@ -156,7 +198,10 @@ fn draw_map(area: &HashMap<Pos, Tile>) {
 
 fn main() {
     let instr = std::fs::read_to_string("input").unwrap();
-    let mut tilemap: HashMap<Pos, Tile> = HashMap::new();
+    let w = instr.lines().next().unwrap().chars().count();
+    let h = instr.lines().count();
+
+    let mut tilemap = TileMap::new(h, w);
 
     for (y, line) in instr.lines().enumerate() {
         for (x, c) in line.chars().enumerate() {
