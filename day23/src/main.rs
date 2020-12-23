@@ -13,6 +13,7 @@ fn nth_fwd(buf: &[Node], id: usize, n: usize) -> usize {
     cur
 }
 
+#[allow(dead_code)]
 fn nth_back(buf: &[Node], id: usize, n: usize) -> usize {
     let mut cur = id;
     for _ in 0..n {
@@ -72,7 +73,6 @@ fn print_cups(cups: &[Node], mut cur: usize) {
 
 fn main_loop(cups: &mut Vec<Node>, empty_slots: &mut Vec<usize>, iters: usize) -> usize {
     let mut cur = 0;
-    let mut d_pos = 0;
 
     for _ in 0..iters {
         let cup = cups[cur].dat;
@@ -98,21 +98,12 @@ fn main_loop(cups: &mut Vec<Node>, empty_slots: &mut Vec<usize>, iters: usize) -
             }
         }
 
-        let mut leftd = d_pos;
-        let mut rightd = d_pos;
-
-        let mut leftd_i = d_pos;
-        let mut rightd_i = d_pos;
-
-        let mut leftc = cur;
-        let mut rightc = cur;
-
         let mut leftc_i = cur;
         let mut rightc_i = cur;
 
-        d_pos = 'outer: loop {
+        let d_pos = 'outer: loop {
             let hints = [
-                leftd, rightd, leftd_i, rightd_i, leftc, rightc, leftc_i, rightc_i,
+                leftc_i, rightc_i,
             ];
 
             for &h in &hints {
@@ -120,15 +111,6 @@ fn main_loop(cups: &mut Vec<Node>, empty_slots: &mut Vec<usize>, iters: usize) -
                     break 'outer h;
                 }
             }
-
-            leftd = nth_back(&cups, leftd, 1);
-            rightd = nth_fwd(&cups, rightd, 1);
-
-            leftc = nth_back(&cups, leftc, 1);
-            rightc = nth_fwd(&cups, rightc, 1);
-
-            rightd_i = (rightd_i + 1) % cups.len();
-            leftd_i = ((leftd_i + cups.len()) - 1) % cups.len();
 
             rightc_i = (rightc_i + 1) % cups.len();
             leftc_i = ((leftc_i + cups.len()) - 1) % cups.len();
@@ -140,6 +122,7 @@ fn main_loop(cups: &mut Vec<Node>, empty_slots: &mut Vec<usize>, iters: usize) -
 
         cur = nth_fwd(&cups, cur, 1);
     }
+
     cur
 }
 
@@ -177,7 +160,7 @@ fn p1() {
 fn p2() {
     let input = "219748365";
     let mut cups = Vec::new();
-    let mut empty_slots = Vec::new();
+    let mut empty_slots = Vec::with_capacity(1_000_000);
 
     let mut iter = input.chars().map(|c| c.to_digit(10).unwrap() as i64);
 
