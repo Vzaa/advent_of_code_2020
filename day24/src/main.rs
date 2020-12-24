@@ -1,10 +1,9 @@
-use std::collections::HashMap;
 use std::collections::HashSet;
 use std::str::FromStr;
 
-type TileMap = HashMap<Pos, Color>;
+type TileMap = HashSet<Pos>;
 
-type Pos = (i64, i64);
+type Pos = (i16, i16);
 
 #[derive(Debug, Clone, Copy)]
 enum Dir {
@@ -20,15 +19,6 @@ enum Dir {
 enum Color {
     B,
     W,
-}
-
-impl Color {
-    fn flip(self) -> Color {
-        match self {
-            Color::B => Color::W,
-            Color::W => Color::B,
-        }
-    }
 }
 
 impl FromStr for Dir {
@@ -64,7 +54,7 @@ impl From<Dir> for Pos {
 
 static NLIST: [Pos; 6] = [(2, 0), (1, -1), (-1, -1), (-2, 0), (-1, 1), (1, 1)];
 
-fn neighbors(area: &TileMap, p: Pos) -> impl Iterator<Item = &Color> + '_ {
+fn neighbors(area: &TileMap, p: Pos) -> impl Iterator<Item = &Pos> + '_ {
     NLIST.iter().filter_map(move |n| {
         let np = (p.0 + n.0, p.1 + n.1);
         area.get(&np)
@@ -72,10 +62,7 @@ fn neighbors(area: &TileMap, p: Pos) -> impl Iterator<Item = &Color> + '_ {
 }
 
 fn neighbors_p(p: Pos) -> impl Iterator<Item = Pos> {
-    NLIST.iter().filter_map(move |n| {
-        let np = (p.0 + n.0, p.1 + n.1);
-        Some(np)
-    })
+    NLIST.iter().map(move |n| (p.0 + n.0, p.1 + n.1))
 }
 
 fn main() {
@@ -109,7 +96,7 @@ fn main() {
         tile_dirs.push(dirs);
     }
 
-    let mut tilemap = HashMap::new();
+    let mut tilemap: HashSet<Pos> = HashSet::new();
 
     for dirs in &tile_dirs {
         let mut pos = (0, 0);
@@ -118,52 +105,51 @@ fn main() {
             pos = (pos.0 + j.0, pos.1 + j.1);
         }
 
-        let color = *tilemap.get(&pos).unwrap_or(&Color::W);
-        tilemap.insert(pos, color.flip());
+        if tilemap.contains(&pos) {
+            tilemap.remove(&pos);
+        } else {
+            tilemap.insert(pos);
+        }
     }
 
-    let cnt = tilemap.values().filter(|c| matches!(c, Color::B)).count();
+    let cnt = tilemap.iter().count();
     println!("Part 1: {}", cnt);
 
-    let mut tilemap_new = HashMap::new();
     for _ in 0..100 {
-        let mut to_visit = HashSet::new();
+        let mut tilemap_new = HashSet::new();
+        let mut to_visit = tilemap.clone();
 
-        for t in tilemap.keys() {
-            to_visit.insert(*t);
+        for t in &tilemap {
             for n in neighbors_p(*t) {
                 to_visit.insert(n);
             }
         }
 
         for p in to_visit {
-            let v = *tilemap.get(&p).unwrap_or(&Color::W);
+            let v = if tilemap.contains(&p) {
+                Color::B
+            } else {
+                Color::W
+            };
 
-            let c = neighbors(&tilemap, p)
-                .filter(|c| matches!(c, Color::B))
-                .count();
+            let c = neighbors(&tilemap, p).count();
 
             match v {
                 Color::B => {
-                    if c == 0 || c > 2 {
-                        tilemap_new.insert(p, Color::W);
-                    } else {
-                        tilemap_new.insert(p, Color::B);
+                    if c != 0 && c <= 2 {
+                        tilemap_new.insert(p);
                     }
                 }
                 Color::W => {
                     if c == 2 {
-                        tilemap_new.insert(p, Color::B);
-                    } else {
-                        tilemap_new.insert(p, Color::W);
+                        tilemap_new.insert(p);
                     }
                 }
             }
         }
 
-        std::mem::swap(&mut tilemap, &mut tilemap_new);
+        tilemap = tilemap_new;
     }
-
-    let cnt = tilemap.values().filter(|c| matches!(c, Color::B)).count();
+    let cnt = tilemap.iter().count();
     println!("Part 2: {}", cnt);
 }
