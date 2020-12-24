@@ -75,17 +75,10 @@ fn main() {
         let mut dirs = vec![];
 
         while i < line.len() {
-            let a = &line[i..(i + 1)];
-            let b = if i + 2 <= line.len() {
-                &line[i..(i + 2)]
-            } else {
-                ""
-            };
-
-            if let Ok(d) = a.parse::<Dir>() {
+            if let Ok(d) = line[i..(i + 1)].parse::<Dir>() {
                 dirs.push(d);
                 i += 1;
-            } else if let Ok(d) = b.parse::<Dir>() {
+            } else if let Ok(d) = line[i..(i + 2)].parse::<Dir>() {
                 dirs.push(d);
                 i += 2;
             } else {
